@@ -1,0 +1,102 @@
+#pragma once
+
+
+#include <stdint.h>
+
+
+#define AIR_VERSION_MAJOR @AIR_VERSION_MAJOR@
+#define AIR_VERSION_MINOR @AIR_VERSION_MINOR@
+#define AIR_VERSION_PATCH @AIR_VERSION_PATCH@
+#define AIR_VERSION_BETA @AIR_VERSION_BETA@
+#define AIR_VERSION_RC @AIR_VERSION_RC@
+#define AIR_VERSION_SCM "@AIR_VERSION_SCM@"
+#define AIR_WEBSITE "https://github.com/Alinthropisc/air"
+
+
+
+#define AIR_VERSION_NUM ((AIR_VERSION_MAJOR) * 10000u + (AIR_VERSION_MINOR) * 100u + (AIR_VERSION_PATCH))
+#define AIR_STRINGIFY_(x) #x
+#define AIR_STRINGIFY(x)  AIR_STRINGIFY_(x)
+#define AIR_VERSION_STRING AIR_STRINGIFY(AIR_VERSION_MAJOR) "." AIR_STRINGIFY(AIR_VERSION_MINOR) "." AIR_STRINGIFY(AIR_VERSION_PATCH)
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
+typedef struct AirVersion {
+    uint32_t major;
+    uint32_t minor;
+    uint32_t patch;
+    uint32_t beta;
+    uint32_t rc;
+    const char *scm;
+    const char *full_string; /* "1.0.0-beta1+abc1234" */
+} AirVersion;
+
+
+[[nodiscard]]
+const AirVersion *air_version_get(void);
+
+
+[[nodiscard]]
+const char *air_version_string(const char *progname);
+
+
+
+[[nodiscard]]
+static inline bool air_version_check(uint32_t need_major,uint32_t need_minor,uint32_t need_patch)
+{
+    uint32_t need = need_major * 10000u + need_minor * 100u + need_patch;
+    return AIR_VERSION_NUM >= need;
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
