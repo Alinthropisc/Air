@@ -4,4 +4,22 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-thiserror = "2.0.18"
+tokio = { version = "1",   features = ["full"] }
+thiserror = "2"
+tracing = "0.1"
+rayon = "1"
+memmap2 = "0.9"
+bytes = "1"
+tracing-subscriber = "0.3.23"
+tempfile = "3.27.0"
+serde = "1.0.228"
+reqwest = "0.13.4"
+serde_json = "1.0.150"
+libc = "0.2.186"
+which = "8.0.2"
+regex = "1.12.3"
+csv = "1.4.0"
+
+[dev-dependencies]
+criterion = "0.8.2"
+tokio-test = "0.4.5"
