@@ -2,6 +2,7 @@
 # Editor Files and Folders
 
 .idea/
+.idea
 .vscode/
 .DS_Store
 *~

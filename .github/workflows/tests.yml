@@ -1,0 +1,112 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
+
+jobs:
+  # ── Unit + Integration tests (Linux x86_64) ────────────────────────────────
+  test-linux:
+    name: Tests · Linux x86_64
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-test-
+
+      - name: Install C23 toolchain + dev libs
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            clang-18 libclang-18-dev \
+            libssl-dev pkg-config \
+            libpcap-dev libnl-3-dev libnl-genl-3-dev
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+
+      - name: Test air-crypto (C23 FFI + Rust wrappers)
+        run: cargo test -p air-crypto --lib -- --test-output immediate
+
+      - name: Test air-tui (widget logic)
+        run: cargo test -p air-tui --lib -- --test-output immediate
+
+      - name: Test workspace (all crates)
+        run: cargo test --workspace --lib -- --test-output immediate
+
+  # ── Cross-compilation check (ARM64) ───────────────────────────────────────
+  cross-arm64:
+    name: Cross-compile · aarch64
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Install cross-compilation tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Install cross
+        run: cargo install cross --locked
+
+      - name: Cross-check (no run)
+        run: cross build --workspace --target aarch64-unknown-linux-gnu 2>&1 | head -60
+        continue-on-error: true
+
+  # ── Coverage (cargo-tarpaulin) ─────────────────────────────────────────────
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install C23 toolchain + dev libs
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            clang-18 libssl-dev pkg-config \
+            libpcap-dev libnl-3-dev libnl-genl-3-dev
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin --locked
+
+      - name: Run coverage
+        run: |
+          cargo tarpaulin \
+            --workspace \
+            --engine llvm \
+            --out Xml \
+            --output-dir coverage/ \
+            --exclude-files "*/native/*" "*/ffi.rs" \
+            --timeout 120
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
