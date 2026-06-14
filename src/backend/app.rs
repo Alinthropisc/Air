@@ -169,9 +169,9 @@ pub fn check_deps(deps: &[&str]) -> Result<(), AppError> {
 
 pub fn is_root() -> bool {
     #[cfg(unix)]
-    { unsafe { libc::getuid() } == 0 }
+    return unsafe { libc::getuid() == 0 };
     #[cfg(not(unix))]
-    { false }
+    return false;
 }
 
 

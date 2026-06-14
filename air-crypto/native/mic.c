@@ -20,8 +20,8 @@
  *  SHA-1 internal (FIPS 180-4)
  * ═══════════════════════════════════════════════════════════════════════ */
 
-constexpr size_t SHA1_BLOCK = 64;
-constexpr size_t SHA1_DLEN  = 20;
+#define SHA1_BLOCK ((size_t)64)
+#define SHA1_DLEN  ((size_t)20)
 
 typedef struct { uint32_t s[5]; uint64_t bits; uint8_t buf[64]; } sha1_ctx_t;
 
@@ -138,12 +138,12 @@ int air_hmac_sha1(const uint8_t *key,  size_t key_len,
  *  MD5 (RFC 1321)
  * ═══════════════════════════════════════════════════════════════════════ */
 
-constexpr size_t MD5_BLOCK = 64;
-constexpr size_t MD5_DLEN  = 16;
+#define MD5_BLOCK ((size_t)64)
+#define MD5_DLEN  ((size_t)16)
 
 typedef struct { uint32_t s[4]; uint64_t bits; uint8_t buf[64]; } md5_ctx_t;
 
-static constexpr uint32_t MD5_K[64] = {
+static const uint32_t MD5_K[64] = {
     0xd76aa478u,0xe8c7b756u,0x242070dbu,0xc1bdceeeu,0xf57c0fafu,0x4787c62au,0xa8304613u,0xfd469501u,
     0x698098d8u,0x8b44f7afu,0xffff5bb1u,0x895cd7beu,0x6b901122u,0xfd987193u,0xa679438eu,0x49b40821u,
     0xf61e2562u,0xc040b340u,0x265e5a51u,0xe9b6c7aau,0xd62f105du,0x02441453u,0xd8a1e681u,0xe7d3fbc8u,
@@ -153,7 +153,7 @@ static constexpr uint32_t MD5_K[64] = {
     0xf4292244u,0x432aff97u,0xab9423a7u,0xfc93a039u,0x655b59c3u,0x8f0ccc92u,0xffeff47du,0x85845dd1u,
     0x6fa87e4fu,0xfe2ce6e0u,0xa3014314u,0x4e0811a1u,0xf7537e82u,0xbd3af235u,0x2ad7d2bbu,0xeb86d391u,
 };
-static constexpr uint8_t MD5_S[64] = {
+static const uint8_t MD5_S[64] = {
     7,12,17,22, 7,12,17,22, 7,12,17,22, 7,12,17,22,
     5, 9,14,20, 5, 9,14,20, 5, 9,14,20, 5, 9,14,20,
     4,11,16,23, 4,11,16,23, 4,11,16,23, 4,11,16,23,

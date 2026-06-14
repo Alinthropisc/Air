@@ -16,7 +16,7 @@ jobs:
     name: Lint & Format
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
@@ -50,7 +50,7 @@ jobs:
     name: clang-tidy (C23)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install clang-18 + clang-tidy
         run: |
@@ -60,18 +60,21 @@ jobs:
 
       - name: Run clang-tidy on air-crypto native sources
         run: |
-          clang-tidy-18 \
-            -checks='-*,clang-analyzer-*,bugprone-*,performance-*,portability-*' \
-            --extra-arg="-std=c23" \
-            --extra-arg="-Iair-crypto/include" \
-            air-crypto/native/*.c
+          for f in air-crypto/native/*.c; do
+            clang-tidy-18 \
+              -checks='-*,clang-analyzer-*,bugprone-*,performance-*,portability-*' \
+              "$f" -- \
+              -std=c23 \
+              -Iair-crypto/include \
+              -xc
+          done
 
   # ── Security audit ────────────────────────────────────────────────────────
   audit:
     name: Security Audit
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked

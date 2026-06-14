@@ -13,8 +13,8 @@
 /* SHA-1 (FIPS 180-1)                                                  */
 /* ------------------------------------------------------------------ */
 
-constexpr size_t SHA1_DIGEST_LEN = 20;
-constexpr size_t SHA1_BLOCK_LEN = 64;
+#define SHA1_DIGEST_LEN ((size_t)20)
+#define SHA1_BLOCK_LEN  ((size_t)64)
 
 typedef struct
 {
