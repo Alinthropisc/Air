@@ -1,0 +1,15 @@
+edition = "2024"
+
+# Preserve manual import grouping and ordering
+imports_granularity = "Preserve"
+group_imports = "Preserve"
+
+# Allow longer lines for readability in FFI/crypto code
+max_width = 100
+comment_width = 100
+
+# Keep struct field alignment as-is where possible
+struct_field_align_threshold = 20
+
+# Don't collapse short functions (keep one-liner impls readable)
+fn_single_line = false

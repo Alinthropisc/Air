@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="art/photo_2026-06-07_16-27-13.jpg" alt="Air Dragon" width="340"/>
+<img src="art/photo_2026-06-07_16-27-13-removebg-preview.png" alt="Air Dragon" width="340"/>
 
 ```
  █████╗ ██╗██████╗

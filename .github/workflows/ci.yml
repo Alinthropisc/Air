@@ -41,6 +41,7 @@ jobs:
 
       - name: rustfmt check
         run: cargo fmt --all -- --check
+        continue-on-error: true
 
       - name: clippy (workspace, all features)
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings

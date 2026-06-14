@@ -192,7 +192,7 @@ int air_pbkdf2_sha1(const uint8_t *passphrase, size_t passphrase_len,
 	if (iterations == 0 || out_len == 0)
 		return 2;
 
-	constexpr size_t HLEN = SHA1_DIGEST_LEN;
+	const size_t HLEN = SHA1_DIGEST_LEN;
 
 	/* salt || INT_BE32(block_index) */
 	uint8_t *salted = malloc(salt_len + 4);
