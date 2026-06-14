@@ -3,7 +3,7 @@ use std::path::Path;
 use std::process::Stdio;
 use tokio::process::Command as AsyncCmd;
 use tokio::time::{interval, Duration};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 
 use crate::globals::State;
 use crate::types::*;

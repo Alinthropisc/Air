@@ -30,6 +30,7 @@ use std::collections::HashMap;
 
 lazy_static! {{
     pub static ref VENDORS: HashMap<&'static str, &'static str> = {{
+        #[allow(unused_mut)]
         let mut map = HashMap::new();
 
 {parsed_data}

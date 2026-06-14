@@ -137,8 +137,6 @@ fn session_tried() -> &'static Mutex<u64> {
 // Clean interface - no direct lock() calls in UI code
 // ─────────────────────────────────────────────
 
-use crate::AirError;
-
 pub struct State;
 
 impl State {
@@ -396,7 +394,7 @@ impl State {
     // ── Session stats ────────────────────────────────────────────────────────
 
     pub fn session_total_tried() -> u64 {
-        session_tried().lock().copied().unwrap_or(0)
+        *session_tried().lock().unwrap_or_else(|e| e.into_inner())
     }
 
     // Stop everything gracefully

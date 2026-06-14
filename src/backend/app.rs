@@ -1,5 +1,5 @@
 use tokio::signal;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 use crate::globals::State;
 use super::*;
@@ -190,7 +190,9 @@ pub fn check_for_update_sync(current: &str) -> Option<String> {
     let url = "https://api.github.com/repos/your-org/air/releases/latest";
     let body: serde_json::Value = ureq::get(url)
         .header("User-Agent", &format!("Air/{}", current))
+        .config()
         .timeout(std::time::Duration::from_secs(5))
+        .build()
         .call()
         .ok()?
         .body_mut()

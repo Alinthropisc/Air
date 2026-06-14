@@ -3,7 +3,7 @@ use std::process::Stdio;
 use std::sync::Mutex;
 use tokio::process::Command;
 use tokio::task::JoinHandle;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use crate::globals::State;
 use crate::types::*;

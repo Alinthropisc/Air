@@ -1,6 +1,5 @@
-use std::process::Stdio;
 use tokio::process::Command;
-use tracing::{error, info, warn};
+use tracing::info;
 
 use crate::globals::State;
 use crate::types::*;

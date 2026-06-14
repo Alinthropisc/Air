@@ -41,13 +41,13 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
 
       - name: Test air-crypto (C23 FFI + Rust wrappers)
-        run: cargo test -p air-crypto --lib -- --test-output immediate
+        run: cargo test -p air-crypto --lib -- --show-output
 
       - name: Test air-tui (widget logic)
-        run: cargo test -p air-tui --lib -- --test-output immediate
+        run: cargo test -p air-tui --lib -- --show-output
 
       - name: Test workspace (all crates)
-        run: cargo test --workspace --lib -- --test-output immediate
+        run: cargo test --workspace --lib -- --show-output
 
   # ── Cross-compilation check (ARM64) ───────────────────────────────────────
   cross-arm64:

@@ -20,7 +20,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{
         Block, Borders, Cell, Gauge, List, ListItem, ListState,
-        Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Paragraph, Row,
         Table, TableState, Tabs, Wrap,
     },
     Frame, Terminal,
@@ -679,6 +679,9 @@ fn draw_log(f: &mut Frame, app: &mut App, area: Rect) {
 
 fn draw_settings(f: &mut Frame, _app: &mut App, area: Rect) {
     let s = State::get_settings();
+    let s_display_hidden    = s.display_hidden_ap.to_string();
+    let s_kill_nm           = s.kill_network_manager.to_string();
+    let s_auto_save         = s.auto_save_handshakes.to_string();
     let lines = vec![
         Line::from(Span::styled(
             " Settings  (edit /etc/air/config.toml to change)",
@@ -686,9 +689,9 @@ fn draw_settings(f: &mut Frame, _app: &mut App, area: Rect) {
         )),
         Line::from(""),
         setting_row("mac_address",          &s.mac_address),
-        setting_row("display_hidden_ap",    &s.display_hidden_ap.to_string()),
-        setting_row("kill_network_manager", &s.kill_network_manager.to_string()),
-        setting_row("auto_save_handshakes", &s.auto_save_handshakes.to_string()),
+        setting_row("display_hidden_ap",    &s_display_hidden),
+        setting_row("kill_network_manager", &s_kill_nm),
+        setting_row("auto_save_handshakes", &s_auto_save),
         setting_row("handshake_dir",        &s.handshake_dir),
         setting_row("default_attack_tool",  &s.default_attack_tool),
         Line::from(""),
