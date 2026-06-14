@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::{fmt, EnvFilter};
 
 use air::backend;
-use air::globals::{AppStats, State};
+use air::globals::State;
 
 // ── CLI definition (Builder pattern via clap derive) ────────────────────
 
@@ -140,11 +140,10 @@ async fn main() {
         .compact()
         .init();
 
-    if !cli.no_root_check {
-        if let Err(e) = backend::check_root() {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        }
+    if !cli.no_root_check
+        && let Err(e) = backend::check_root() {
+        eprintln!("error: {e}");
+        std::process::exit(1);
     }
 
     // Graceful shutdown on Ctrl-C
@@ -272,12 +271,9 @@ async fn cmd_crack(
         }
     });
 
-    match WpaEngine::crack_auto(engine, hs, source).await? {
-        Some(r) => {
-            println!("  PMK: {}", hex_str(&r.pmk));
-            println!("  tried: {}", r.tried);
-        }
-        None => {}
+    if let Some(r) = WpaEngine::crack_auto(engine, hs, source).await? {
+        println!("  PMK: {}", hex_str(&r.pmk));
+        println!("  tried: {}", r.tried);
     }
     Ok(())
 }
@@ -415,7 +411,7 @@ fn parse_hex(s: &str) -> Result<Vec<u8>, String> {
 }
 
 fn parse_mac(s: &str) -> air::AirResult<[u8; 6]> {
-    let bytes = parse_hex(s).map_err(|e| air::AirError::InvalidParam(e))?;
+    let bytes = parse_hex(s).map_err(air::AirError::InvalidParam)?;
     if bytes.len() != 6 {
         return Err(air::AirError::InvalidParam(format!("bad MAC: {s}")));
     }
