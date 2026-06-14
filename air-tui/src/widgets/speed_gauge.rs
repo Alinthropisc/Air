@@ -3,9 +3,9 @@
 
 use ratatui::{
     layout::Rect,
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
-    widgets::{Block, Borders, Gauge, Paragraph},
+    widgets::{Gauge, Paragraph},
     Frame,
 };
 use crate::theme::Theme;

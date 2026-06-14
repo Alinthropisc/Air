@@ -84,8 +84,16 @@ pub async fn enable_monitor(iface: &str) -> Result<String, IfaceError> {
     kill_network_services().await?;
     let old_ifaces = list_interfaces().await?;
     // pipe yes to airmon-ng to auto-confirm killing processes
-    let yes = Command::new("yes").stdout(Stdio::piped()).spawn().map_err(IfaceError::Io)?;
-    let out = Command::new("airmon-ng").args(["start", iface]).stdin(yes.stdout).output().await.map_err(IfaceError::Io)?;
+    let yes = std::process::Command::new("yes")
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .map_err(IfaceError::Io)?;
+    let out = Command::new("airmon-ng")
+        .args(["start", iface])
+        .stdin(yes.stdout.unwrap())
+        .output()
+        .await
+        .map_err(IfaceError::Io)?;
 
     if !out.status.success() {
         let msg = String::from_utf8_lossy(&out.stdout).to_string();

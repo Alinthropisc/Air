@@ -191,7 +191,7 @@ pub fn check_for_update_sync(current: &str) -> Option<String> {
     let body: serde_json::Value = ureq::get(url)
         .header("User-Agent", &format!("Air/{}", current))
         .config()
-        .timeout(std::time::Duration::from_secs(5))
+        .timeout_global(std::time::Duration::from_secs(5))
         .build()
         .call()
         .ok()?
