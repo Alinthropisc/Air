@@ -117,15 +117,18 @@ pub enum BruteforceCharset {
 }
 
 impl BruteforceCharset {
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::Params(p) => p.build(),
-            Self::Custom(s) => s.clone(),
-        }
-    }
-
     pub fn is_valid(&self) -> bool {
         !self.to_string().is_empty()
+    }
+}
+
+impl std::fmt::Display for BruteforceCharset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::Params(p) => p.build(),
+            Self::Custom(s) => s.clone(),
+        };
+        write!(f, "{}", s)
     }
 }
 
