@@ -1,25 +1,68 @@
+[workspace]
+members = [".", "air-crypto", "air-tui"]
+resolver = "2"
+
 [package]
 name = "air"
 version = "0.1.0"
 edition = "2024"
+description = "Air — async Rust + C23 Wi-Fi auditing toolkit (TUI-first)"
+authors = ["Ali"]
 
+# ── Core async runtime ──────────────────────────────────────────────────
 [dependencies]
-tokio = { version = "1",   features = ["full"] }
-thiserror = "2"
-tracing = "0.1"
-rayon = "1"
-memmap2 = "0.9"
-bytes = "1"
-tracing-subscriber = "0.3.23"
-tempfile = "3.27.0"
-serde = "1.0.228"
-reqwest = "0.13.4"
-serde_json = "1.0.150"
-libc = "0.2.186"
-which = "8.0.2"
-regex = "1.12.3"
-csv = "1.4.0"
+tokio   = { version = "1",    features = ["full"] }
+rayon   = "1"
+futures = "0.3"
+
+# ── Crypto: C23 core (PMK, HMAC-SHA1, PRF-512, MIC) ───────────────────
+air-crypto = { path = "air-crypto" }
+# Rust fallbacks for AES-CMAC (WPA2-AES MIC) until C23 AES lands
+cmac    = "0.7"
+aes     = "0.8"
+
+# ── TUI ────────────────────────────────────────────────────────────────
+ratatui        = "0.29"
+crossterm      = { version = "0.28", features = ["event-stream"] }
+unicode-width  = "0.2"
+
+# ── CLI argument parsing ────────────────────────────────────────────────
+clap = { version = "4", features = ["derive", "color"] }
+
+# ── Serialization ───────────────────────────────────────────────────────
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml       = "1"
+
+# ── Error handling / Logging ────────────────────────────────────────────
+thiserror          = "2"
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# ── System / process control ────────────────────────────────────────────
+nix      = { version = "0.31", features = ["signal", "process"] }
+libc     = "0.2"
+which    = "8"
+ctrlc    = "3.5"
+chrono   = "0.4"
+
+# ── File / IO ───────────────────────────────────────────────────────────
+memmap2  = "0.9"
+bytes    = "1"
+tempfile = "3"
+regex    = "1"
+csv      = "1"
+
+# ── Network / update check ──────────────────────────────────────────────
+ureq = { version = "3", features = ["json"] }
+
+# ── Misc ────────────────────────────────────────────────────────────────
+lazy_static = "1"
+
+[build-dependencies]
+serde = { version = "1", features = ["derive"] }
+csv   = "1"
 
 [dev-dependencies]
-criterion = "0.8.2"
-tokio-test = "0.4.5"
+criterion  = "0.8"
+tokio-test = "0.4"

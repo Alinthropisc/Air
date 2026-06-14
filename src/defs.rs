@@ -57,24 +57,6 @@ macro_rules! array_count {
 }
 
 
-#[derive(Debug, thiserror::Error)]
-pub enum AirError {
-    #[error("Capture error: {0}")]
-    Capture(String),
-
-    #[error("Contract violation: {0}")]
-    Contract(String),
-
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("Invalid parameter: {0}")]
-    InvalidParam(String),
-}
-
-pub type AirResult<T> = Result<T, AirError>;
-
-
 #[inline(always)]
 pub fn likely(b: bool) -> bool { 
     b 

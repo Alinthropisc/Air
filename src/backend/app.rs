@@ -175,14 +175,28 @@ pub fn is_root() -> bool {
 }
 
 
-// Check GitHub API for newer version
-pub async fn check_for_update(current: &str) -> Option<String> {
-    let url = "https://api.github.com/repos/your/air/releases/latest";
-    let client = reqwest::Client::builder().user_agent(format!("Air/{}", current)).timeout(std::time::Duration::from_secs(5)).build().ok()?;
-    let resp = client.get(url).send().await.ok()?;
-    let json: serde_json::Value = resp.json().await.ok()?;
-    let latest = json["tag_name"].as_str()?;
+/// Thin wrapper called from main.rs — returns Err if not running as root.
+pub fn check_root() -> crate::AirResult<()> {
+    if !is_root() {
+        return Err(crate::AirError::Engine(
+            "root privileges required — run with sudo".into(),
+        ));
+    }
+    Ok(())
+}
 
+/// Blocking version of the update check (runs inside spawn_blocking).
+pub fn check_for_update_sync(current: &str) -> Option<String> {
+    let url = "https://api.github.com/repos/your-org/air/releases/latest";
+    let body: serde_json::Value = ureq::get(url)
+        .header("User-Agent", &format!("Air/{}", current))
+        .timeout(std::time::Duration::from_secs(5))
+        .call()
+        .ok()?
+        .body_mut()
+        .read_json()
+        .ok()?;
+    let latest = body["tag_name"].as_str()?;
     if latest != current {
         info!("new version available: {}", latest);
         Some(latest.to_string())
@@ -190,6 +204,15 @@ pub async fn check_for_update(current: &str) -> Option<String> {
         info!("already up to date");
         None
     }
+}
+
+/// Async update check — offloads HTTP onto a thread-pool thread.
+pub async fn check_for_update(current: &str) -> Option<String> {
+    let cur = current.to_string();
+    tokio::task::spawn_blocking(move || check_for_update_sync(&cur))
+        .await
+        .ok()
+        .flatten()
 }
 
 

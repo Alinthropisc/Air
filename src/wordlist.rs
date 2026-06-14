@@ -5,6 +5,147 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 use crate::{AirError, AirResult};
 
+// ── WordSource — Strategy pattern ─────────────────────────────────────────────
+// Each variant is an interchangeable word-generation strategy.
+// `WpaEngine::crack_auto()` accepts a `WordSource` and calls the same pipeline.
+
+/// Unified word source — Strategy pattern for the crack pipeline.
+pub enum WordSource {
+    /// One or more dictionary files
+    Files(WordlistConfig),
+    /// Exhaustive bruteforce from a charset + length range
+    Bruteforce(BruteforceConfig),
+    /// Chain: exhaust dictionaries first, then bruteforce
+    Chain { files: WordlistConfig, brute: BruteforceConfig },
+}
+
+impl WordSource {
+    /// Estimate total candidates (0 = unknown).
+    pub async fn count_hint(&self) -> u64 {
+        match self {
+            Self::Files(cfg) => {
+                match WordlistReader::new(cfg.clone()) {
+                    Ok(rd) => rd.count_words().await,
+                    Err(_) => 0,
+                }
+            }
+            Self::Bruteforce(cfg) => cfg.candidate_count(),
+            Self::Chain { files, brute } => {
+                let file_cnt = match WordlistReader::new(files.clone()) {
+                    Ok(rd) => rd.count_words().await,
+                    Err(_) => 0,
+                };
+                file_cnt.saturating_add(brute.candidate_count())
+            }
+        }
+    }
+
+    /// Stream all words into `tx`, respecting backpressure.
+    pub async fn stream_into(self, tx: mpsc::Sender<Vec<String>>) -> AirResult<()> {
+        match self {
+            Self::Files(cfg) => WordlistReader::new(cfg)?.stream_into(tx).await,
+            Self::Bruteforce(cfg) => BruteforceGen::new(cfg).stream_into(tx).await,
+            Self::Chain { files, brute } => {
+                let tx2 = tx.clone();
+                WordlistReader::new(files)?.stream_into(tx).await?;
+                BruteforceGen::new(brute).stream_into(tx2).await
+            }
+        }
+    }
+}
+
+// ── BruteforceConfig ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct BruteforceConfig {
+    pub charset:    String,
+    pub min_len:    usize,
+    pub max_len:    usize,
+    pub batch_size: usize,
+}
+
+impl Default for BruteforceConfig {
+    fn default() -> Self {
+        Self {
+            charset:    "abcdefghijklmnopqrstuvwxyz0123456789".to_string(),
+            min_len:    8,
+            max_len:    10,
+            batch_size: 1000,
+        }
+    }
+}
+
+impl BruteforceConfig {
+    pub fn new(charset: impl Into<String>, min_len: usize, max_len: usize) -> Self {
+        Self { charset: charset.into(), min_len, max_len, ..Default::default() }
+    }
+
+    /// Total candidates: sum of charset^len for each length in range.
+    pub fn candidate_count(&self) -> u64 {
+        let n = self.charset.chars().count() as u64;
+        (self.min_len..=self.max_len)
+            .map(|l| n.saturating_pow(l as u32))
+            .fold(0u64, |acc, x| acc.saturating_add(x))
+    }
+}
+
+// ── BruteforceGen — async exhaustive generator ────────────────────────────────
+// Pattern: Iterator (async streaming producer via odometer algorithm).
+
+pub struct BruteforceGen {
+    config: BruteforceConfig,
+}
+
+impl BruteforceGen {
+    pub fn new(config: BruteforceConfig) -> Self {
+        Self { config }
+    }
+
+    /// Stream candidates into `tx` in lexicographic order.
+    /// Heavy generation runs on the blocking pool — never blocks the async reactor.
+    pub async fn stream_into(self, tx: mpsc::Sender<Vec<String>>) -> AirResult<()> {
+        let cfg = self.config;
+        tokio::task::spawn_blocking(move || {
+            let chars: Vec<char> = cfg.charset.chars().collect();
+            let n = chars.len();
+            if n == 0 { return; }
+            let mut batch = Vec::with_capacity(cfg.batch_size);
+
+            'outer: for len in cfg.min_len..=cfg.max_len {
+                let mut indices = vec![0usize; len];
+                loop {
+                    let word: String = indices.iter().map(|&i| chars[i]).collect();
+                    batch.push(word);
+
+                    if batch.len() >= cfg.batch_size {
+                        let send = std::mem::replace(&mut batch, Vec::with_capacity(cfg.batch_size));
+                        if tx.blocking_send(send).is_err() { return; }
+                    }
+
+                    // Odometer: increment from rightmost position
+                    let mut carry = true;
+                    for pos in (0..len).rev() {
+                        if carry {
+                            indices[pos] += 1;
+                            if indices[pos] >= n {
+                                indices[pos] = 0;
+                            } else {
+                                carry = false;
+                                break;
+                            }
+                        }
+                    }
+                    // Carry propagated all the way left → this length exhausted
+                    if carry { continue 'outer; }
+                }
+            }
+            if !batch.is_empty() { let _ = tx.blocking_send(batch); }
+        })
+        .await
+        .map_err(|e| AirError::Engine(e.to_string()))
+    }
+}
+
 
 
 
@@ -148,6 +289,47 @@ impl WordlistReader {
             tracing::info!("[ ETA ]: Wordlist exhausted");
         });
         Ok((rx, handle))
+    }
+
+    /// Stream passwords into an already-existing sender.
+    ///
+    /// Caller creates the channel and passes the tx end in.
+    /// Useful when the consumer already owns the rx.
+    pub async fn stream_into(self, tx: mpsc::Sender<Vec<String>>) -> AirResult<()> {
+        let config = self.config.clone();
+        let mut batch = Vec::with_capacity(config.batch_size);
+
+        for path in &config.paths {
+            tracing::info!("reading wordlist: {}", path.display());
+            let file = match tokio::fs::File::open(path).await {
+                Ok(f)  => f,
+                Err(e) => {
+                    tracing::error!("cannot open {}: {}", path.display(), e);
+                    continue;
+                }
+            };
+            let reader = tokio::io::BufReader::new(file);
+            let mut lines = tokio::io::AsyncBufReadExt::lines(reader);
+
+            while let Ok(Some(line)) = lines.next_line().await {
+                let word = line.trim().to_string();
+                if word.len() < config.min_len || word.len() > config.max_len {
+                    continue;
+                }
+                batch.push(word);
+                if batch.len() >= config.batch_size {
+                    let send = std::mem::replace(&mut batch, Vec::with_capacity(config.batch_size));
+                    if tx.send(send).await.is_err() {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+
+        if !batch.is_empty() {
+            let _ = tx.send(batch).await;
+        }
+        Ok(())
     }
 
     /// Streaming with mmap (for very large files > 1GB)

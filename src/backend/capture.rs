@@ -4,6 +4,7 @@ use tracing::{error, info, warn};
 
 use crate::globals::State;
 use crate::types::*;
+use crate::engine::{WpaHandshake, WpaKeyVersion};
 
 
 #[derive(thiserror::Error, Debug)]
@@ -31,6 +32,48 @@ pub struct HandshakeInfo {
     pub bssid: String,
     pub essid: String,
     pub handshake_count: u32,
+}
+
+/// High-level API used by main.rs: parse cap files and return WpaHandshake structs.
+///
+/// This is a best-effort synchronous wrapper; it calls aircrack-ng in a blocking
+/// fashion via spawn_blocking so it can be used from async context.
+/// Returns only entries where aircrack-ng confirmed a handshake.
+pub fn get_handshakes<'a>(
+    cap_files: impl IntoIterator<Item = &'a str>,
+) -> Result<Vec<WpaHandshake>, CaptureError> {
+    let files: Vec<&str> = cap_files.into_iter().collect();
+    let existing: Vec<&str> = files.iter().copied()
+        .filter(|p| std::path::Path::new(p).exists())
+        .collect();
+
+    if existing.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let output = std::process::Command::new("aircrack-ng")
+        .args(&existing)
+        .output()
+        .map_err(CaptureError::Io)?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let infos  = parse_handshake_output(&stdout)?;
+
+    // Convert HandshakeInfo → WpaHandshake with zeroed crypto fields.
+    // Caller is expected to populate anonce/snonce/eapol/mic/keyver
+    // from the actual pcap (e.g. via a future pcap parser module).
+    let handshakes = infos.into_iter().map(|info| WpaHandshake {
+        bssid:  info.bssid,
+        stmac:  String::new(),
+        anonce: [0u8; 32],
+        snonce: [0u8; 32],
+        eapol:  Vec::new(),
+        mic:    [0u8; 16],
+        keyver: WpaKeyVersion::Wpa2Ccmp,
+        essid:  info.essid,
+    }).collect();
+
+    Ok(handshakes)
 }
 
 // Run aircrack-ng on cap files to find handshakes

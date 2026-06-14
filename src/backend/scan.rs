@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
-use tokio::process::Command;
+use tokio::process::Command as AsyncCmd;
 use tokio::time::{interval, Duration};
 use tracing::{debug, error, info, warn};
 
@@ -104,15 +104,15 @@ pub async fn start_scan(config: ScanConfig) -> Result<(), ScanError> {
         args.push(ch_str);
     }
     info!("starting scan: {:?}", config);
-    let child = Command::new("airodump-ng")
+    // std::process::Command — fire-and-forget; result tracked in State.
+    let child = std::process::Command::new("airodump-ng")
         .args(&args)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .kill_on_drop(true)
         .spawn()
         .map_err(ScanError::Io)?;
 
-    State::set_scan_proc(Some(child.into()));
+    State::set_scan_proc(Some(child));
     Ok(())
 }
 
@@ -142,7 +142,7 @@ pub async fn stop_scan() -> Result<(), ScanError> {
     }
 
     // merge live + old captures
-    let status = Command::new("mergecap")
+    let status = AsyncCmd::new("mergecap")
         .args(["-a", "-F", "pcap", "-w", &merge_cap, &old_cap, &live_cap])
         .status()
         .await

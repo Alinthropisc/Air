@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::process::Child;
 use std::sync::{Mutex, OnceLock, RwLock};
 use std::thread::JoinHandle;
+use tokio::sync::broadcast;
 
 use crate::types::*;
 
@@ -22,15 +23,6 @@ pub const OLD_SCAN_PATH:   &str = "/tmp/air_old_scan";
 pub const MERGE_SCAN_PATH: &str = "/tmp/air_merge_scan";
 pub const CONFIG_PATH:     &str = "/etc/air/config.toml";
 pub const CAPTURE_DIR:     &str = "/tmp/air_captures";
-
-// ─────────────────────────────────────────────
-// Embedded icons
-// ─────────────────────────────────────────────
-
-pub const APP_ICON:     &[u8] = include_bytes!("../icons/app_icon.png");
-pub const DEAUTH_ICON:  &[u8] = include_bytes!("../icons/deauth.png");
-pub const STOP_ICON:    &[u8] = include_bytes!("../icons/stop.png");
-pub const CAPTURE_ICON: &[u8] = include_bytes!("../icons/capture.png");
 
 // ─────────────────────────────────────────────
 // Type aliases for clarity
@@ -110,6 +102,34 @@ fn new_version() -> &'static Mutex<Option<String>> {
 fn services_to_restore() -> &'static Mutex<Vec<String>> {
     static SERVICES: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
     SERVICES.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+// ── Observer: application-wide event bus (broadcast channel) ────────────────
+// Pattern: Observer — State::emit() notifies all TUI/logger subscribers.
+fn event_bus() -> &'static broadcast::Sender<AppEvent> {
+    static BUS: OnceLock<broadcast::Sender<AppEvent>> = OnceLock::new();
+    BUS.get_or_init(|| {
+        let (tx, _) = broadcast::channel(512);
+        tx
+    })
+}
+
+// Live crack progress — shared between engine task and TUI
+fn crack_progress() -> &'static Mutex<CrackProgress> {
+    static CP: OnceLock<Mutex<CrackProgress>> = OnceLock::new();
+    CP.get_or_init(|| Mutex::new(CrackProgress::default()))
+}
+
+// In-memory log ring buffer — last 500 lines, shown in Log tab
+fn log_ring() -> &'static Mutex<VecDeque<LogEntry>> {
+    static LOG: OnceLock<Mutex<VecDeque<LogEntry>>> = OnceLock::new();
+    LOG.get_or_init(|| Mutex::new(VecDeque::with_capacity(500)))
+}
+
+// Session statistics: total candidates tried across all cracks
+fn session_tried() -> &'static Mutex<u64> {
+    static T: OnceLock<Mutex<u64>> = OnceLock::new();
+    T.get_or_init(|| Mutex::new(0))
 }
 
 // ─────────────────────────────────────────────
@@ -306,6 +326,78 @@ impl State {
         services_to_restore().lock().map(|mut g| std::mem::take(&mut *g)).unwrap_or_default()
     }
 
+    // ── Observer: event bus ──────────────────────────────────────────────────
+
+    /// Subscribe to the application event bus.
+    /// Returns a receiver; call `.recv().await` in TUI or logger tasks.
+    pub fn subscribe() -> broadcast::Receiver<AppEvent> {
+        event_bus().subscribe()
+    }
+
+    /// Broadcast an event to all active subscribers.
+    pub fn emit(ev: AppEvent) {
+        // Mirror Log events into the ring buffer
+        if let AppEvent::Log(level, ref msg) = ev {
+            if let Ok(mut ring) = log_ring().lock() {
+                if ring.len() >= 500 { ring.pop_front(); }
+                ring.push_back(LogEntry::new(level, msg.clone()));
+            }
+        }
+        // Mirror crack progress into shared state
+        if let AppEvent::CrackProgress(ref p) = ev {
+            if let Ok(mut g) = crack_progress().lock() {
+                *g = p.clone();
+            }
+            // Accumulate session totals
+            if let Ok(mut t) = session_tried().lock() {
+                *t = (*t).max(p.tried);
+            }
+        }
+        let _ = event_bus().send(ev);
+    }
+
+    // ── Log helpers ──────────────────────────────────────────────────────────
+
+    pub fn log_info(msg: impl Into<String>) {
+        Self::emit(AppEvent::Log(LogLevel::Info, msg.into()));
+    }
+    pub fn log_warn(msg: impl Into<String>) {
+        Self::emit(AppEvent::Log(LogLevel::Warn, msg.into()));
+    }
+    pub fn log_error(msg: impl Into<String>) {
+        Self::emit(AppEvent::Log(LogLevel::Error, msg.into()));
+    }
+    pub fn log_success(msg: impl Into<String>) {
+        Self::emit(AppEvent::Log(LogLevel::Success, msg.into()));
+    }
+
+    pub fn get_log_entries() -> Vec<LogEntry> {
+        log_ring().lock().map(|g| g.iter().cloned().collect()).unwrap_or_default()
+    }
+
+    // ── Crack progress ───────────────────────────────────────────────────────
+
+    pub fn get_crack_progress() -> CrackProgress {
+        crack_progress().lock().map(|g| g.clone()).unwrap_or_default()
+    }
+
+    pub fn reset_crack_progress(bssid: &str, essid: &str, total: u64) {
+        let p = CrackProgress {
+            bssid:  bssid.to_string(),
+            essid:  essid.to_string(),
+            total,
+            state:  CrackState::Running,
+            ..Default::default()
+        };
+        if let Ok(mut g) = crack_progress().lock() { *g = p.clone(); }
+        let _ = event_bus().send(AppEvent::CrackProgress(p));
+    }
+
+    // ── Session stats ────────────────────────────────────────────────────────
+
+    pub fn session_total_tried() -> u64 {
+        session_tried().lock().copied().unwrap_or(0)
+    }
 
     // Stop everything gracefully
     pub fn shutdown() {

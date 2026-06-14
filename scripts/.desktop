@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Air
+Comment=A WiFi security auditing software mainly based on aircrack-ng tools suite
+Exec=pkexec airgorah
+Icon=/usr/share/pixmaps/airgorah.png
+ApplicationId=com.molivier.airgorah
+Categories=Network;Monitor;Utility;GTK;
+Type=Application
+Terminal=false

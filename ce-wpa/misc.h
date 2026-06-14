@@ -135,6 +135,44 @@ AIR_EXPORT char *air_strtokm(char *str,const char *delim);
 #define AIR_NO_ASAN
 #endif
 
+/* ── Memory alignment constants (JtR-compatible) ───────────────────── */
+
+enum : size_t {
+    MEM_ALIGN_NONE      = 1u,
+    MEM_ALIGN_WORD      = sizeof(void *),
+    MEM_ALIGN_SIMD      = 16u,      /* SSE/NEON minimum; bump to 64 for AVX-512 */
+    MEM_ALIGN_PAGE      = 4096u,
+    MEM_ALLOC_SIZE      = 65536u,   /* JtR tiny-alloc slab size                 */
+    MEM_ALLOC_MAX_WASTE = 32u,      /* max bytes wasted before a new slab       */
+};
+
+/* Forward declarations for memory.c functions */
+void *mem_calloc_align_func(size_t count, size_t size, size_t align);
+void *mem_calloc_func(size_t count, size_t size);
+
+/* Forward declarations for all memory.c slab functions */
+void *mem_alloc_func(size_t size);
+void *mem_alloc_tiny_func(size_t size, size_t align);
+void *mem_alloc_copy_func(void *src, size_t size, size_t align);
+void *mem_alloc_align_func(size_t size, size_t align);
+
+/* Convenience macros matching the JtR calling convention */
+#define mem_alloc(size)                  mem_alloc_func(size)
+#define mem_alloc_tiny(size, align)      mem_alloc_tiny_func((size), (align))
+#define mem_alloc_copy(src, size, align) mem_alloc_copy_func((src), (size), (align))
+
+#define mem_calloc_align(count, size, align) \
+    mem_calloc_align_func((count), (size), (align))
+
+#define mem_calloc(count, size) \
+    mem_calloc_func((count), (size))
+
+/* MEM_FREE: free + zero the pointer to catch use-after-free */
+#define MEM_FREE(ptr) do { free(ptr); (ptr) = nullptr; } while (0)
+
+/* UNUSED_PARAM: silence unused-parameter warnings */
+#define UNUSED_PARAM(x) ((void)(x))
+
 #ifdef __cplusplus
 }
 #endif

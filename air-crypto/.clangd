@@ -1,0 +1,9 @@
+CompileFlags:
+  Add:
+    - "-std=c2x"
+    - "-xc"
+    - "-Iinclude"
+    - "-Inative"
+
+Diagnostics:
+  UnusedIncludes: None

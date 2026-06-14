@@ -10,8 +10,32 @@
 #include <assert.h>
 
 
-#if __STDC_VERSION__ < 202311L
-#error "Air requires C23 or later"
+/* ── C23 / compat shims ──────────────────────────────────────────────────────
+ * Real builds: clang -std=c23 (clang ≥ 18) or gcc -std=c23 (gcc ≥ 14).
+ * Older toolchains / IDE analysers: we provide keyword fallbacks so headers
+ * remain parseable.  The hard #error only fires when AIR_ENFORCE_C23 is set
+ * (e.g. -DAIR_ENFORCE_C23 in the production Makefile / build.rs).            */
+#if __STDC_VERSION__ >= 202311L
+    /* ── Full C23: nullptr + constexpr are native keywords ── */
+#else
+    /* ── Pre-C23 compat (c2x / c17 / IDE analysis) ── */
+#   ifndef nullptr
+#       define nullptr ((void *)0)
+#   endif
+#   ifndef constexpr
+#       define constexpr static const
+#   endif
+    /* noreturn: C23 uses [[noreturn]]; earlier standards use _Noreturn */
+#   ifndef __STDC_VERSION__
+#       define _AIR_NORETURN
+#   elif __STDC_VERSION__ >= 201112L
+#       define _AIR_NORETURN _Noreturn
+#   else
+#       define _AIR_NORETURN
+#   endif
+#   ifdef AIR_ENFORCE_C23
+#       error "Air requires C23 — build with: clang -std=c23 -DAIR_ENFORCE_C23"
+#   endif
 #endif
 
 
@@ -27,10 +51,22 @@
 #endif
 
 
-[[noreturn]]
-static inline void air_contract_fail(const char *restrict kind, const char *restrict expr,const char *restrict file, int line)
+/* [[noreturn]] is C23; use _Noreturn (__attribute__) for older toolchains. */
+#if __STDC_VERSION__ >= 202311L
+#  define AIR_NORETURN [[noreturn]]
+#elif defined(__GNUC__) || defined(__clang__)
+#  define AIR_NORETURN __attribute__((noreturn))
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#  define AIR_NORETURN _Noreturn
+#else
+#  define AIR_NORETURN
+#endif
+
+AIR_NORETURN
+static inline void air_contract_fail(const char *restrict kind, const char *restrict expr,
+                                     const char *restrict file, int line)
 {
-    fprintf(stderr, "[ ETA ]: Air %s failed at %s:%d -> %s\n", kind, file, line, expr);
+    fprintf(stderr, "[ AIR ]: %s failed at %s:%d → %s\n", kind, file, line, expr);
     abort();
 }
 

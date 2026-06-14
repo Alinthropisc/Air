@@ -1,0 +1,20 @@
+CompileFlags:
+  Add:
+    - "-std=c2x"
+    - "-xc"
+    - "-I."
+    - "-Isupport"
+    - "-Ilibac"
+    - "-Iosdep"
+    - "-Ithird-party"
+    - "-Iair-crypto/include"
+  Remove:
+    - "-std=c23"
+    - "-std=c17"
+    - "-std=c11"
+    - "-xc++"
+
+Diagnostics:
+  UnusedIncludes: None
+
+# Restart clangd after changing this file (clangd --check or IDE restart).

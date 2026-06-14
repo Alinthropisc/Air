@@ -72,6 +72,11 @@ static_assert(sizeof(uint32_t) == 4, "uint32_t must be 4 bytes");
 static_assert(sizeof(uint64_t) == 8, "uint64_t must be 8 bytes");
 static_assert(sizeof(uintptr_t) == AIR_ARCH_SIZE,"pointer size mismatch");
 
+/* JtR compatibility aliases — used by memory.c and simd-intrinsics.c */
+typedef uint32_t ARCH_WORD_32;
+typedef uint64_t ARCH_WORD_64;
+#define ARCH_ALLOWS_UNALIGNED AIR_ALLOWS_UNALIGNED
+
 
 
 

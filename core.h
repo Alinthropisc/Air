@@ -82,8 +82,6 @@ typedef enum KoreKAttack : uint32_t {
     KOREK_COUNT = AIR_N_ATTACKS,
 } KoreKAttack;
 
- * Vote структура
- * ───────────────────────────────────────────── */
 typedef struct AirVote {
     int32_t idx;
     int32_t val;
