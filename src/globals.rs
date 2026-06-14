@@ -51,6 +51,7 @@ fn iface_was_monitor() -> &'static Mutex<bool> {
 }
 
 // Background thread that periodically refreshes scan data
+#[allow(dead_code)]
 fn update_proc() -> &'static Mutex<Option<JoinHandle<bool>>> {
     static UPDATE: OnceLock<Mutex<Option<JoinHandle<bool>>>> = OnceLock::new();
     UPDATE.get_or_init(|| Mutex::new(None))
@@ -204,10 +205,9 @@ impl State {
 
     // Mark AP as having captured handshake
     pub fn mark_handshake(bssid: &str) {
-        if let Ok(mut g) = aps().write() {
-            if let Some(ap) = g.get_mut(bssid) {
-                ap.handshake = true;
-            }
+        if let Ok(mut g) = aps().write()
+            && let Some(ap) = g.get_mut(bssid) {
+            ap.handshake = true;
         }
     }
 
@@ -255,10 +255,9 @@ impl State {
 
     // Stop scan process
     pub fn stop_scan() {
-        if let Ok(mut g) = scan_proc().lock() {
-            if let Some(mut child) = g.take() {
-                let _ = child.kill();
-            }
+        if let Ok(mut g) = scan_proc().lock()
+            && let Some(mut child) = g.take() {
+            let _ = child.kill();
         }
     }
 
@@ -313,10 +312,9 @@ impl State {
 
 
     pub fn add_service_to_restore(name: String) {
-        if let Ok(mut g) = services_to_restore().lock() {
-            if !g.contains(&name) {
-                g.push(name);
-            }
+        if let Ok(mut g) = services_to_restore().lock()
+            && !g.contains(&name) {
+            g.push(name);
         }
     }
 
@@ -335,11 +333,10 @@ impl State {
     /// Broadcast an event to all active subscribers.
     pub fn emit(ev: AppEvent) {
         // Mirror Log events into the ring buffer
-        if let AppEvent::Log(level, ref msg) = ev {
-            if let Ok(mut ring) = log_ring().lock() {
-                if ring.len() >= 500 { ring.pop_front(); }
-                ring.push_back(LogEntry::new(level, msg.clone()));
-            }
+        if let AppEvent::Log(level, ref msg) = ev
+            && let Ok(mut ring) = log_ring().lock() {
+            if ring.len() >= 500 { ring.pop_front(); }
+            ring.push_back(LogEntry::new(level, msg.clone()));
         }
         // Mirror crack progress into shared state
         if let AppEvent::CrackProgress(ref p) = ev {

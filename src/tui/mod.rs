@@ -106,7 +106,7 @@ impl App {
 
         // Rebuild sorted AP order (strongest signal first)
         let mut aps: Vec<_> = State::get_aps().into_values().collect();
-        aps.sort_by(|a, b| b.power.cmp(&a.power));
+        aps.sort_by_key(|b| std::cmp::Reverse(b.power));
         self.ap_order = aps.into_iter().map(|ap| ap.bssid).collect();
 
         // Keep selection in bounds
@@ -216,22 +216,18 @@ async fn event_loop(
             .map_err(|e| AirError::Engine(e.to_string()))?;
 
         // Drain any pending AppEvents from the broadcast bus (non-blocking)
-        loop {
-            match bus_rx.try_recv() {
-                Ok(ev)  => app.on_event(&ev),
-                Err(_)  => break,
-            }
+        while let Ok(ev) = bus_rx.try_recv() {
+            app.on_event(&ev);
         }
 
         // Check keyboard/mouse with short timeout so the bus stays responsive
         let timeout = tick.saturating_sub(last_tick.elapsed()).min(Duration::from_millis(50));
 
-        if event::poll(timeout).map_err(|e| AirError::Engine(e.to_string()))? {
-            if let Event::Key(key) =
+        if event::poll(timeout).map_err(|e| AirError::Engine(e.to_string()))?
+            && let Event::Key(key) =
                 event::read().map_err(|e| AirError::Engine(e.to_string()))?
-            {
-                handle_key(&mut app, key.code, key.modifiers);
-            }
+        {
+            handle_key(&mut app, key.code, key.modifiers);
         }
 
         if last_tick.elapsed() >= tick {

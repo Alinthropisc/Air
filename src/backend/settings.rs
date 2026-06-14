@@ -73,11 +73,10 @@ pub async fn save_settings(
     }
 
     // ensure config directory exists
-    if let Some(parent) = std::path::Path::new(CONFIG_PATH).parent() {
-        if !parent.exists() {
-            tokio::fs::create_dir_all(parent).await
-                .map_err(SettingsError::Io)?;
-        }
+    if let Some(parent) = std::path::Path::new(CONFIG_PATH).parent()
+        && !parent.exists() {
+        tokio::fs::create_dir_all(parent).await
+            .map_err(SettingsError::Io)?;
     }
 
     let toml = toml::to_string_pretty(&settings)

@@ -17,10 +17,9 @@ include!(concat!(env!("OUT_DIR"), "/vendors.rs"));
 pub fn lookup_vendor(mac: &str) -> String {
     // check cache first
     let prefix = mac_prefix(mac);
-    if let Some(cached) = State::lookup_vendor(&prefix) {
-        if !cached.is_empty() {
-            return cached;
-        }
+    if let Some(cached) = State::lookup_vendor(&prefix)
+        && !cached.is_empty() {
+        return cached;
     }
 
     // cache miss - look up in OUI table
@@ -73,8 +72,8 @@ fn mac_prefix(mac: &str) -> String {
 pub async fn update_all_vendors() {
     let aps = State::get_aps();
 
-    for (_, ap) in &aps {
-        for (mac, _client) in &ap.clients {
+    for ap in aps.values() {
+        for mac in ap.clients.keys() {
             let prefix = mac_prefix(mac);
             // only look up if not cached yet
             if State::lookup_vendor(&prefix).is_none() {

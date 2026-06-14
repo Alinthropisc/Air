@@ -236,9 +236,8 @@ pub fn spawn_deauth_attack(
 
         loop {
             // check count limit
-            if let Some(max) = config.count {
-                if sent >= max { break; }
-            }
+            if let Some(max) = config.count
+                && sent >= max { break; }
 
             let deauth = build_deauth_frame(
                 &target,

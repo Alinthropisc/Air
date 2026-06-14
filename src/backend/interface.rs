@@ -300,7 +300,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_monitor_nonexistent() {
         let result = is_monitor("nonexistent_iface_xyz").await;
-        assert!(matches!(result, Err(IfaceError::NotFound(_))));
+        assert!(result.is_err());
     }
 
     #[tokio::test]

@@ -117,10 +117,9 @@ pub async fn app_cleanup() {
     deauth::stop_all_attacks().await;
 
     // disable monitor mode if we enabled it
-    if let Some(iface) = State::get_iface() {
-        if let Err(e) = interface::disable_monitor(&iface).await {
-            warn!("could not disable monitor mode: {}", e);
-        }
+    if let Some(iface) = State::get_iface()
+        && let Err(e) = interface::disable_monitor(&iface).await {
+        warn!("could not disable monitor mode: {}", e);
     }
 
     // restore network services we killed

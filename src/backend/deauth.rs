@@ -136,11 +136,10 @@ fn build_attack_args(iface: &str,bssid: &str,client: Option<&str>,tool: &AttackT
 // Stop attack on specific AP
 pub async fn stop_deauth(bssid: &str) -> Result<(), DeauthError> {
     // abort all spawned tasks for this bssid
-    if let Ok(mut pool) = attack_handles().lock() {
-        if let Some(handles) = pool.remove(bssid) {
-            for h in handles {
-                h.abort();
-            }
+    if let Ok(mut pool) = attack_handles().lock()
+        && let Some(handles) = pool.remove(bssid) {
+        for h in handles {
+            h.abort();
         }
     }
 

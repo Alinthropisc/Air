@@ -42,21 +42,22 @@ impl CpuFeatures {
         }
     }
 
+    #[allow(clippy::if_same_then_else)]
     pub fn optimal_batch_size(&self) -> usize {
-        if self.avx512f { 
-            16 
-        } else if self.avx2 { 
-            8 
-        } else if self.avx  { 
-            8 
-        } else if self.sse2 { 
-            4 
-        } else if self.asimd{ 
-            4 
-        } else if self.neon { 
-            4 
-        } else { 
-            1 
+        if self.avx512f {
+            16
+        } else if self.avx2 {
+            8
+        } else if self.avx  {
+            8
+        } else if self.sse2 {
+            4
+        } else if self.asimd{
+            4
+        } else if self.neon {
+            4
+        } else {
+            1
         }
     }
 

@@ -125,8 +125,10 @@ pub struct WpaEngine {
     essid:       String,
     simd:        SimdSupport,
     /// ESSID aligned buffer for SIMD
+    #[allow(dead_code)]
     essid_buf:   AlignedBuffer,
     /// Maximum parallel threads
+    #[allow(dead_code)]
     max_threads: usize,
 }
 
@@ -286,11 +288,11 @@ impl WpaEngine {
                 }));
             }
 
-            if result.is_some() {
+            if let Some(ref r) = result {
                 State::emit(AppEvent::CrackFound {
                     bssid: handshake.bssid.clone(),
                     essid: handshake.essid.clone(),
-                    password: result.as_ref().unwrap().password.clone(),
+                    password: r.password.clone(),
                 });
                 return Ok(result);
             }
@@ -304,6 +306,7 @@ impl WpaEngine {
     /// PMKID attack — no 4-way handshake needed.
     /// PMKID = HMAC-SHA1-128(PMK, "PMK Name" || AP_MAC || STA_MAC)
     /// Pattern: Observer — emits CrackProgress via event bus.
+    #[allow(clippy::too_many_arguments)]
     pub async fn crack_pmkid_channel(
         self: Arc<Self>,
         pmkid:   [u8; 16],
@@ -356,11 +359,11 @@ impl WpaEngine {
                 }));
             }
 
-            if result.is_some() {
+            if let Some(ref r) = result {
                 State::emit(AppEvent::CrackFound {
                     bssid:    bssid.clone(),
                     essid:    essid.clone(),
-                    password: result.as_ref().unwrap().password.clone(),
+                    password: r.password.clone(),
                 });
                 return Ok(result);
             }

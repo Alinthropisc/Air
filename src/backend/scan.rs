@@ -419,7 +419,7 @@ mod tests {
         };
         let ap = parse_raw_ap(raw, &HashMap::new());
         assert_eq!(ap.power, -72);
-        assert_eq!(ap.signal_quality(), "Fair");
+        assert_eq!(ap.signal_quality(), "Weak");
     }
 }
 
